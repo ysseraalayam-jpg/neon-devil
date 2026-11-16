@@ -1,0 +1,6 @@
+{
+  "name": "NEON DEVIL",
+  "description": "Precision 2D neon arcade platformer with unexpected traps, responsive cube physics, and zero-checkpoint mastery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

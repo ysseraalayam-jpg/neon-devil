@@ -1,5 +1,7 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { GameHud } from './components/GameHud';
+import { LandingPage } from './components/LandingPage';
 import {
   DeathModal,
   LevelSelectModal,
@@ -37,6 +39,7 @@ export default function App() {
   const [progress, setProgress] = useState<GameProgress>(DEFAULT_PROGRESS);
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
 
+  const [showLanding, setShowLanding] = useState(true);
   const [showLevels, setShowLevels] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -49,14 +52,20 @@ export default function App() {
       onProgressChange: (nextProgress) => setProgress(nextProgress),
       onSettingsChange: (nextSettings) => setSettings(nextSettings),
     });
+
     engineRef.current = engine;
     engine.startLoop();
 
-    // Support ?autostart=1 or ?level=3&autostart=1 for immediate entry into active gameplay
     const params = new URLSearchParams(window.location.search);
+
     if (params.get('autostart') === '1') {
       const requestedLevel = Number(params.get('level') || '1');
-      const targetLevel = Number.isFinite(requestedLevel) && requestedLevel >= 1 ? requestedLevel : 1;
+      const targetLevel =
+        Number.isFinite(requestedLevel) && requestedLevel >= 1
+          ? requestedLevel
+          : 1;
+
+      setShowLanding(false);
       engine.startLevel(targetLevel);
     }
 
@@ -73,28 +82,32 @@ export default function App() {
         setShowSettings(false);
       }
     };
+
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showLevels, showSettings]);
 
   const handleStartPlay = () => {
+    setShowLanding(false);
     setShowLevels(false);
     setShowSettings(false);
+
     const targetLevel = Math.min(progress.unlockedLevel, TOTAL_LEVELS);
     engineRef.current?.startLevel(targetLevel);
     canvasRef.current?.focus();
   };
 
   const handleSelectLevel = (levelId: number) => {
+    setShowLanding(false);
     setShowLevels(false);
     setShowSettings(false);
+
     engineRef.current?.startLevel(levelId);
     canvasRef.current?.focus();
   };
 
   return (
     <main className="relative w-full h-full overflow-hidden bg-[#040714]">
-      {/* Isolated full-bleed canvas mount */}
       <div className="absolute inset-0">
         <canvas
           ref={canvasRef}
@@ -104,8 +117,13 @@ export default function App() {
         />
       </div>
 
-      {/* Title Screen */}
-      {hud.status === 'title' && (
+      {showLanding && (
+        <div className="absolute inset-0 z-30">
+          <LandingPage onPlay={handleStartPlay} />
+        </div>
+      )}
+
+      {!showLanding && hud.status === 'title' && (
         <TitleScreen
           progress={progress}
           onPlay={handleStartPlay}
@@ -115,7 +133,6 @@ export default function App() {
         />
       )}
 
-      {/* Active Gameplay HUD */}
       {(hud.status === 'playing' || hud.status === 'dying') && (
         <GameHud
           hud={hud}
@@ -123,11 +140,12 @@ export default function App() {
           onToggleMute={() => engineRef.current?.toggleMute()}
           onRestart={() => engineRef.current?.restartLevel()}
           onPause={() => engineRef.current?.pause()}
-          onTouchInput={(control, pressed) => engineRef.current?.setTouchInput(control, pressed)}
+          onTouchInput={(control, pressed) =>
+            engineRef.current?.setTouchInput(control, pressed)
+          }
         />
       )}
 
-      {/* Pause Screen */}
       {hud.status === 'paused' && (
         <PauseModal
           hud={hud}
@@ -149,7 +167,6 @@ export default function App() {
         />
       )}
 
-      {/* Death Screen */}
       {hud.status === 'dead' && (
         <DeathModal
           hud={hud}
@@ -162,7 +179,6 @@ export default function App() {
         />
       )}
 
-      {/* Level Completion Screen */}
       {hud.status === 'victory' && (
         <VictoryModal
           hud={hud}
@@ -180,7 +196,6 @@ export default function App() {
         />
       )}
 
-      {/* Level Selection Modal */}
       {showLevels && (
         <LevelSelectModal
           progress={progress}
@@ -189,14 +204,16 @@ export default function App() {
         />
       )}
 
-      {/* Settings Modal */}
       {showSettings && (
         <SettingsModal
           settings={settings}
-          onUpdate={(partial) => engineRef.current?.updateSettings(partial)}
+          onUpdate={(partial) =>
+            engineRef.current?.updateSettings(partial)
+          }
           onClose={() => setShowSettings(false)}
         />
       )}
     </main>
   );
 }
+
